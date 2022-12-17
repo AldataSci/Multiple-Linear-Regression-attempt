@@ -1,0 +1,71 @@
+---
+title: "Discussion Board Week # 12"
+author: "Al Haque"
+date: '2022-11-09'
+output: html_document
+---
+
+### Info:
+This dataset contains a hourly/daily summary for Szeged, Hungary area, between 2006 and 2016. With columns that include,
+time,summary,precipType,temperature,apparentTemperature,humidity,windSpeed,windBearing,visibility,loudCover,pressure.
+Link to Dataset: <https://www.kaggle.com/datasets/budincsevity/szeged-weather> 
+
+
+```{r}
+library(tidyverse)
+Data <- read.csv("https://raw.githubusercontent.com/AldataSci/Multiple-Linear-Regression-attempt/main/weatherHistory.csv",header=TRUE)
+head(Data)
+```
+
+```{r}
+## Clean out the null data types: 
+NewD <-Data %>%
+  select(-Daily.Summary,-Loud.Cover) %>%
+  filter(Precip.Type != "null")
+
+```
+
+```{r}
+## Convert precip.type into numerical representations:
+NewD$Precip.Type <- as.character(NewD$Precip.Type)
+NewD$Precip.Type[NewD$Precip.Type == "rain"] <- 0
+NewD$Precip.Type[NewD$Precip.Type == "snow"] <- 1
+NewD$Precip.Type <- as.integer(NewD$Precip.Type)
+
+```
+
+```{r}
+## wanted to change the weather summary into numerical representation as well but its too many entries to change.. 
+unique(NewD$Summary)
+```
+```{r}
+## Quadratic Variable (Double the WindSpeed)
+Wind_spd <- NewD$Wind.Speed..km.h.^2
+
+## Dichomtus vs QUantiative Interaction:
+Precip_Wind <- Wind_spd * NewD$Precip.Type
+```
+
+```{r}
+## Making a model: 
+## Predict the temperature with humidity,wind_sped,Precip.wind
+weather.lm <- lm(Temperature..C.~Wind_spd + Precip_Wind + Humidity,data=NewD)
+summary(weather.lm)
+```
+
+```{r}
+## Residual analysis This doesn't look good 
+plot(weather.lm$fitted.values, weather.lm$residuals, xlab="Fitted Values", ylab="Residuals", main="Residuals vs. Fitted", col = "red")
+abline(h=0)
+```
+```{r}
+qqnorm(weather.lm$residuals, col = "blue")
+qqline(weather.lm$residuals, col = "darkblue")
+```
+
+### Conclusion: 
+The model doesn't look that good according to the residual analysis, we can see that the variability in the fitted residuals are all around the same values which is a sign that it is not a good model, in the qq plot we can see both tails skewing especially the left tail not being normally distributed.. The adjusted R2 explains 46% of the variability in temperature. We also see a very small F stat and all the predictors are significant. The equation according to the model is: 
+
+$$
+Temperature = 35.54 -0.00357 * wind_spd -0.02913 * Precip_wind - 30.73 * Humidity 
+$$
